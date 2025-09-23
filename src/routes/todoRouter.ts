@@ -3,6 +3,8 @@ import todoController from "../controllers/todoController.ts";
 
 const router = Router();
 
+router.post("/clearCompleted", todoController.clearCompleted);
+router.put("/toggleAll", todoController.toggleAll);
 router.get("/", todoController.getTodos);
 router.get("/:id", todoController.getTodoById);
 router.delete("/:id", todoController.deleteTodo);

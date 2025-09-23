@@ -95,6 +95,59 @@ class TodoController {
       return res.status(500).json({ message: "Failed to update todo", error });
     }
   }
+
+  async toggleAll(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { todos } = req.body;
+
+      if (!Array.isArray(todos) || todos.length === 0) {
+        return res.status(400).json({ message: "todo[] must not be empty" });
+      }
+
+      const updates = await Promise.all(
+        todos.map((t) =>
+          prisma.todo.update({
+            where: { id: t.id },
+            data: { completed: t.completed },
+          })
+        )
+      );
+
+      return res.status(200).json({
+        message: "Todos updated successfully",
+        updated: updates,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async clearCompleted(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { todos } = req.body;
+
+      if (!Array.isArray(todos) || todos.length === 0) {
+        return res.status(400).json({ message: "todo[] must not be empty" });
+      }
+
+      const ids = todos.map((t) => t.id);
+
+      const result = await prisma.todo.deleteMany({
+        where: {
+          id: { in: ids },
+        },
+      });
+
+      return res.status(200).json({
+        message: "Todos deleted successfully",
+        count: result.count,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
 }
 
 export default new TodoController();
