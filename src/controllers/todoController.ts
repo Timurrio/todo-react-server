@@ -2,16 +2,25 @@ import type { Request, Response, NextFunction } from "express";
 import prisma from "../prismaClient.ts";
 
 class TodoController {
-  async getTodo(req: Request, res: Response, next: NextFunction) {
+  async getTodos(req: Request, res: Response, next: NextFunction) {
+    try {
+      const todos = await prisma.todo.findMany();
+      return res.json(todos);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTodoById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
 
-      if (!id || isNaN(Number(id))) {
+      if (!id) {
         return res.status(400).json({ message: "Invalid ID" });
       }
 
       const todo = await prisma.todo.findUnique({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       if (!todo) {
@@ -34,7 +43,7 @@ class TodoController {
       }
 
       const deletedTodo = await prisma.todo.delete({
-        where: { id: Number(id) },
+        where: { id: id },
       });
 
       return res.json(deletedTodo);
@@ -74,7 +83,7 @@ class TodoController {
       }
 
       const updatedTodo = await prisma.todo.update({
-        where: { id: Number(id) },
+        where: { id: id },
         data: {
           ...(text !== undefined && { text }),
           ...(completed !== undefined && { completed }),
