@@ -67,7 +67,7 @@ class TodoController {
         },
       });
 
-      return res.status(201).json(newTodo);
+      return res.json(newTodo);
     } catch (error) {
       return res.status(500).json({ message: "Failed to add todo", error });
     }
@@ -113,10 +113,7 @@ class TodoController {
         )
       );
 
-      return res.status(200).json({
-        message: "Todos updated successfully",
-        updated: updates,
-      });
+      return res.status(200).json(updates);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal server error" });
@@ -139,10 +136,7 @@ class TodoController {
         },
       });
 
-      return res.status(200).json({
-        message: "Todos deleted successfully",
-        count: result.count,
-      });
+      return res.status(200).json(ids);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal server error" });
