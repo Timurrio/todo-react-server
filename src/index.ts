@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import router from "./routes/index.ts";
 import prisma from "./prismaClient.ts";
+import errorHandlingMiddleware from "./middleware/ErrorMiddleware.ts";
 
 // const express = require("express");
 // const cors = require("cors");
@@ -14,6 +15,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api", router);
+app.use(errorHandlingMiddleware);
 
 const start = async () => {
   try {

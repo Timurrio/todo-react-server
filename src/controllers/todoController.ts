@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../prismaClient.ts";
+import ApiError from "../error/ApiError.ts";
 
 class TodoController {
   async getTodos(req: Request, res: Response, next: NextFunction) {
@@ -7,7 +8,7 @@ class TodoController {
       const todos = await prisma.todo.findMany();
       return res.json(todos);
     } catch (error) {
-      next(error);
+      next(ApiError.internal("Failed to get todos"));
     }
   }
 
@@ -16,7 +17,7 @@ class TodoController {
       const { id } = req.params;
 
       if (!id) {
-        return res.status(400).json({ message: "Invalid ID" });
+        next(ApiError.badRequest("Invalid id"));
       }
 
       const todo = await prisma.todo.findUnique({
@@ -24,13 +25,12 @@ class TodoController {
       });
 
       if (!todo) {
-        return res.status(404).json({ message: "Todo not found" });
+        next(ApiError.badRequest("Todo not found"));
       }
 
       return res.json(todo);
     } catch (error) {
-      console.error("Error in getTodo:", error);
-      return res.status(500).json({ message: "Failed to fetch todo", error });
+      next(ApiError.internal("Failed to fetch todo"));
     }
   }
 
@@ -39,7 +39,7 @@ class TodoController {
       const { id } = req.params;
 
       if (!id) {
-        return res.status(400).json({ message: "ID is required" });
+        next(ApiError.badRequest("ID is required to delete todo"));
       }
 
       const deletedTodo = await prisma.todo.delete({
@@ -48,7 +48,7 @@ class TodoController {
 
       return res.json(deletedTodo);
     } catch (error) {
-      return res.status(500).json({ message: "Failed to delete todo", error });
+      next(ApiError.internal("Failed to delete todo"));
     }
   }
 
@@ -57,7 +57,7 @@ class TodoController {
       const { text, completed } = req.body;
 
       if (!text) {
-        return res.status(400).json({ message: "Text is required" });
+        next(ApiError.badRequest("Text is required"));
       }
 
       const newTodo = await prisma.todo.create({
@@ -69,7 +69,7 @@ class TodoController {
 
       return res.json(newTodo);
     } catch (error) {
-      return res.status(500).json({ message: "Failed to add todo", error });
+      next(ApiError.internal("Failed to add todo"));
     }
   }
 
@@ -79,7 +79,7 @@ class TodoController {
       const { text, completed } = req.body;
 
       if (!id) {
-        return res.status(400).json({ message: "ID is required" });
+        next(ApiError.badRequest("ID is required"));
       }
 
       const updatedTodo = await prisma.todo.update({
@@ -92,7 +92,7 @@ class TodoController {
 
       return res.json(updatedTodo);
     } catch (error) {
-      return res.status(500).json({ message: "Failed to update todo", error });
+      next(ApiError.internal("Failed to update todo"));
     }
   }
 
@@ -101,7 +101,7 @@ class TodoController {
       const { todos } = req.body;
 
       if (!Array.isArray(todos) || todos.length === 0) {
-        return res.status(400).json({ message: "todo[] must not be empty" });
+        next(ApiError.badRequest("todo[] must not be empty"));
       }
 
       const updates = await Promise.all(
@@ -115,8 +115,7 @@ class TodoController {
 
       return res.status(200).json(updates);
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Internal server error" });
+      next(ApiError.internal("Internal server error"));
     }
   }
 
@@ -125,12 +124,12 @@ class TodoController {
       const { todos } = req.body;
 
       if (!Array.isArray(todos) || todos.length === 0) {
-        return res.status(400).json({ message: "todo[] must not be empty" });
+        next(ApiError.badRequest("todo[] must not be empty"));
       }
 
       const ids = todos.map((t) => t.id);
 
-      const result = await prisma.todo.deleteMany({
+      await prisma.todo.deleteMany({
         where: {
           id: { in: ids },
         },
@@ -138,8 +137,7 @@ class TodoController {
 
       return res.status(200).json(ids);
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Internal server error" });
+      next(ApiError.internal("Internal server error"));
     }
   }
 }
