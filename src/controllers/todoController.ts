@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import prisma from "../prismaClient.ts";
 import ApiError from "../error/ApiError.ts";
+import { type Todo } from "../types/Todo.ts";
 
 class TodoController {
   async getTodos(req: Request, res: Response, next: NextFunction) {
@@ -98,7 +99,7 @@ class TodoController {
 
   async toggleAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { todos } = req.body;
+      const { todos }: { todos: Todo[] } = req.body;
 
       if (!Array.isArray(todos) || todos.length === 0) {
         next(ApiError.badRequest("todo[] must not be empty"));
@@ -121,7 +122,7 @@ class TodoController {
 
   async clearCompleted(req: Request, res: Response, next: NextFunction) {
     try {
-      const { todos } = req.body;
+      const { todos }: { todos: Todo[] } = req.body;
 
       if (!Array.isArray(todos) || todos.length === 0) {
         next(ApiError.badRequest("todo[] must not be empty"));
