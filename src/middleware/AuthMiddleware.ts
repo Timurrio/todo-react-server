@@ -1,5 +1,6 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
+import ApiError from "../error/ApiError.ts";
 
 interface AuthRequest extends Request {
   user?: string | JwtPayload;
@@ -7,17 +8,17 @@ interface AuthRequest extends Request {
 
 export default function (req: AuthRequest, res: Response, next: NextFunction) {
   if (req.method === "OPTIONS") {
-    next();
+    return next();
   }
   try {
     const token = req.headers?.authorization?.split(" ")[1];
     if (!token) {
-      res.status(401).json({ message: "Not authorized" });
+      return next(ApiError.forbidden("Not authorized"));
     }
-    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY as string);
     req.user = decoded;
     next();
   } catch (e) {
-    res.status(401).json({ message: "Not authorized" });
+    return next(ApiError.forbidden("Not authorized"));
   }
 }

@@ -4,13 +4,8 @@ import jwt from "jsonwebtoken";
 import prisma from "../prismaClient.ts";
 import ApiError from "../error/ApiError.ts";
 
-const generateJwt = (
-  id: number,
-  email: string,
-  role: string,
-  name: string
-): string => {
-  return jwt.sign({ id, email, role, name }, process.env.SECRET_KEY as string, {
+const generateJwt = (id: string, email: string, name: string): string => {
+  return jwt.sign({ id, email, name }, process.env.SECRET_KEY as string, {
     expiresIn: "24h",
   });
 };
@@ -18,10 +13,9 @@ const generateJwt = (
 class UserController {
   async registration(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password, role, name } = req.body as {
+      const { email, password, name } = req.body as {
         email: string;
         password: string;
-        role: string;
         name: string;
       };
 
@@ -29,8 +23,8 @@ class UserController {
         return next(ApiError.badRequest("Wrong email or password"));
       }
 
-      const candidate = await prisma.user.findUnique({
-        where: { email },
+      const candidate = await prisma.user.findFirst({
+        where: { email: email },
       });
 
       if (candidate) {
@@ -43,12 +37,11 @@ class UserController {
         data: {
           email,
           name,
-          role,
           password: hashPassword,
         },
       });
 
-      const token = generateJwt(user.id, user.email, user.role, user.name);
+      const token = generateJwt(user.id, user.email, user.name);
       return res.json({ token });
     } catch (error) {
       return next(ApiError.internal("Failed to register user"));
@@ -62,7 +55,7 @@ class UserController {
         password: string;
       };
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email },
       });
 
@@ -75,7 +68,7 @@ class UserController {
         return next(ApiError.internal("Wrong password!"));
       }
 
-      const token = generateJwt(user.id, user.email, user.role, user.name);
+      const token = generateJwt(user.id, user.email, user.name);
       return res.json({ token });
     } catch (error) {
       return next(ApiError.internal("Failed to login user"));
@@ -89,15 +82,10 @@ class UserController {
   ) {
     try {
       if (!req.user) {
-        return next(ApiError.unauthorized("Unauthorized"));
+        return next(ApiError.internal("Unauthorized"));
       }
 
-      const token = generateJwt(
-        req.user.id,
-        req.user.email,
-        req.user.role,
-        req.user.name
-      );
+      const token = generateJwt(req.user.id, req.user.email, req.user.name);
       return res.json({ token });
     } catch (error) {
       return next(ApiError.internal("Failed to validate token"));
