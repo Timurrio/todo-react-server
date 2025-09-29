@@ -6,7 +6,8 @@ import { type Todo } from "../types/Todo.ts";
 class TodoController {
   async getTodos(req: Request, res: Response, next: NextFunction) {
     try {
-      const todos = await prisma.todo.findMany();
+      const { id } = req.params;
+      const todos = await prisma.todo.findMany({ where: { userId: id } });
       return res.json(todos);
     } catch (error) {
       next(ApiError.internal("Failed to get todos"));
@@ -55,7 +56,7 @@ class TodoController {
 
   async addTodo(req: Request, res: Response, next: NextFunction) {
     try {
-      const { text, completed } = req.body;
+      const { text, completed, userId } = req.body;
 
       if (!text) {
         next(ApiError.badRequest("Text is required"));
@@ -65,6 +66,7 @@ class TodoController {
         data: {
           text,
           completed: completed ?? false,
+          userId,
         },
       });
 
