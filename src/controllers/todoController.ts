@@ -2,15 +2,21 @@ import type { Request, Response, NextFunction } from "express";
 import prisma from "../prismaClient.ts";
 import ApiError from "../error/ApiError.ts";
 import { type Todo } from "../types/Todo.ts";
+import { type RequestWithUser } from "../types/RequestWithUser.ts";
 
 class TodoController {
-  async getTodos(req: Request, res: Response, next: NextFunction) {
+  async getTodos(req: RequestWithUser, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+
+      if (!req.user || req.user.id !== id) {
+        return next(ApiError.forbidden("No user or incorrect user id"));
+      }
+
       const todos = await prisma.todo.findMany({ where: { userId: id } });
       return res.json(todos);
     } catch (error) {
-      next(ApiError.internal("Failed to get todos"));
+      return next(ApiError.internal("Failed to get todos"));
     }
   }
 
@@ -19,7 +25,7 @@ class TodoController {
       const { id } = req.params;
 
       if (!id) {
-        next(ApiError.badRequest("Invalid id"));
+        return next(ApiError.badRequest("Invalid id"));
       }
 
       const todo = await prisma.todo.findUnique({
@@ -27,21 +33,31 @@ class TodoController {
       });
 
       if (!todo) {
-        next(ApiError.badRequest("Todo not found"));
+        return next(ApiError.badRequest("Todo not found"));
       }
 
       return res.json(todo);
     } catch (error) {
-      next(ApiError.internal("Failed to fetch todo"));
+      return next(ApiError.internal("Failed to fetch todo"));
     }
   }
 
-  async deleteTodo(req: Request, res: Response, next: NextFunction) {
+  async deleteTodo(req: RequestWithUser, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
 
+      if (!req.user) {
+        return next(ApiError.forbidden("No user"));
+      }
+
+      const todo = await prisma.todo.findUnique({ where: { id: id } });
+
+      if (!todo || req.user.id !== todo.userId) {
+        return next(ApiError.badRequest("No todo found or wrong user id"));
+      }
+
       if (!id) {
-        next(ApiError.badRequest("ID is required to delete todo"));
+        return next(ApiError.badRequest("ID is required to delete todo"));
       }
 
       const deletedTodo = await prisma.todo.delete({
@@ -50,16 +66,24 @@ class TodoController {
 
       return res.json(deletedTodo);
     } catch (error) {
-      next(ApiError.internal("Failed to delete todo"));
+      return next(ApiError.internal("Failed to delete todo"));
     }
   }
 
-  async addTodo(req: Request, res: Response, next: NextFunction) {
+  async addTodo(req: RequestWithUser, res: Response, next: NextFunction) {
     try {
       const { text, completed, userId } = req.body;
 
+      if (!req.user) {
+        return next(ApiError.forbidden("Not authorized"));
+      }
+
+      if (userId !== req.user.id) {
+        return next(ApiError.badRequest("userId wrong"));
+      }
+
       if (!text) {
-        next(ApiError.badRequest("Text is required"));
+        return next(ApiError.badRequest("Text is required"));
       }
 
       const newTodo = await prisma.todo.create({
@@ -72,17 +96,31 @@ class TodoController {
 
       return res.json(newTodo);
     } catch (error) {
-      next(ApiError.internal("Failed to add todo"));
+      return next(ApiError.internal("Failed to add todo"));
     }
   }
 
-  async updateTodo(req: Request, res: Response, next: NextFunction) {
+  async updateTodo(req: RequestWithUser, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const { text, completed } = req.body;
 
       if (!id) {
-        next(ApiError.badRequest("ID is required"));
+        return next(ApiError.badRequest("ID is required"));
+      }
+
+      const todo = await prisma.todo.findUnique({
+        where: { id },
+      });
+
+      if (!todo) {
+        return next(ApiError.badRequest("Todo not found"));
+      }
+
+      if (!req.user || todo.userId !== req.user.id) {
+        return next(
+          ApiError.forbidden("You do not have permission to update this todo")
+        );
       }
 
       const updatedTodo = await prisma.todo.update({
@@ -95,16 +133,24 @@ class TodoController {
 
       return res.json(updatedTodo);
     } catch (error) {
-      next(ApiError.internal("Failed to update todo"));
+      return next(ApiError.internal("Failed to update todo"));
     }
   }
 
-  async toggleAll(req: Request, res: Response, next: NextFunction) {
+  async toggleAll(req: RequestWithUser, res: Response, next: NextFunction) {
     try {
       const { todos }: { todos: Todo[] } = req.body;
 
+      if (!req.user) {
+        return next(ApiError.forbidden("Not authorized"));
+      }
+
+      if (req.user.id !== todos[0].userId) {
+        return next(ApiError.badRequest("Wrong userId"));
+      }
+
       if (!Array.isArray(todos) || todos.length === 0) {
-        next(ApiError.badRequest("todo[] must not be empty"));
+        return next(ApiError.badRequest("todo[] must not be empty"));
       }
 
       const updates = await Promise.all(
@@ -118,16 +164,33 @@ class TodoController {
 
       return res.status(200).json(updates);
     } catch (error) {
-      next(ApiError.internal("Internal server error"));
+      return next(ApiError.internal("Internal server error"));
     }
   }
 
-  async clearCompleted(req: Request, res: Response, next: NextFunction) {
+  async clearCompleted(
+    req: RequestWithUser,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { todos }: { todos: Todo[] } = req.body;
 
+      const notCompletedTodos = todos.some((td) => td.completed === false);
+      if (notCompletedTodos) {
+        return next(ApiError.badRequest("There are not completed todos"));
+      }
+
+      if (!req.user) {
+        return next(ApiError.forbidden("Not authorized"));
+      }
+
+      if (req.user.id !== todos[0].userId) {
+        return next(ApiError.badRequest("Wrong userId"));
+      }
+
       if (!Array.isArray(todos) || todos.length === 0) {
-        next(ApiError.badRequest("todo[] must not be empty"));
+        return next(ApiError.badRequest("todo[] must not be empty"));
       }
 
       const ids = todos.map((t) => t.id);
@@ -140,7 +203,7 @@ class TodoController {
 
       return res.status(200).json(ids);
     } catch (error) {
-      next(ApiError.internal("Internal server error"));
+      return next(ApiError.internal("Internal server error"));
     }
   }
 }
