@@ -2,7 +2,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
-    "pmd": "prisma migrate dev"
+    "pmd": "prisma migrate dev",
+    "test": "jest"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",
@@ -14,10 +15,13 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.5.2",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.2",
+    "ts-jest": "^29.4.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   },
