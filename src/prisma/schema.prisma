@@ -18,9 +18,18 @@ model Todo {
 
 model User {
   id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email    String
+  email    String @unique
   name     String
   password String
 
-  todos Todo[]
+  todos         Todo[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique @db.Uuid
 }

@@ -17,6 +17,10 @@ class ApiError {
   static forbidden(message: string) {
     return new ApiError(403, message);
   }
+
+  static unauthorized(message: string) {
+    return new ApiError(401, message);
+  }
 }
 
 export default ApiError;
